@@ -18,6 +18,7 @@ func Get(key string) string {
 	value, ok := viper.Get(key).(string)
 
 	if !ok {
+		log.Fatalf("%q is not a string", key)
 		log.Fatalf("Invalid type assertion")
 	}
 

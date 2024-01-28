@@ -1,22 +1,18 @@
 package main
 
 import (
-	"os"
-
 	"github.com/Courtcircuits/mitter-server/api"
-	"github.com/Courtcircuits/mitter-server/storage"
+	"github.com/Courtcircuits/mitter-server/util"
 )
 
 func main() {
-	storage := storage.NewDatabase()
 
-	port := os.Getenv("PORT")
+	port := util.Get("PORT")
 
-	if port == "" {
-		port = "8080"
+	server := api.NewServer(":" + port)
+
+	err := server.Start()
+	if err != nil {
+		panic(err)
 	}
-
-	server := api.NewServer(":"+port, *storage)
-
-	server.Start()
 }

@@ -1,14 +1,12 @@
 package api
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
-	"strconv"
+	"time"
 
 	"github.com/Courtcircuits/mitter-server/types"
-	"github.com/Courtcircuits/mitter-server/util"
 	"github.com/gorilla/websocket"
 )
 
@@ -51,49 +49,11 @@ func Handler(w http.ResponseWriter, r *http.Request, h *Hub) error {
 	return nil
 }
 
-func (c *Connection) AuthConn(token string) (Owner, error) {
-	clear, err := util.VerifyJWT(token)
-	if err != nil {
-		log.Println("failed loging in")
-		return Owner{}, err
-	}
-	id, err := strconv.Atoi(clear["id"].(string))
-	if err != nil {
-		return Owner{}, err
-	}
-	log.Printf("logged %q \n", clear["name"].(string))
-	return Owner{
-		id:   id,
-		name: clear["name"].(string),
-	}, nil
-}
-
-func (c *Connection) SendAllMessages() error {
-	messages, err := GetServer().store.GetMessages()
-	if err != nil {
-		return err
-	}
-	messages_jsonified, err := json.Marshal(messages)
-
-	if err != nil {
-		return err
-	}
-
-	if err = c.Conn.WriteMessage(websocket.TextMessage, messages_jsonified); err != nil {
-		return err
-	}
-	return nil
-}
-
 // send a message to the client
 func (c *Connection) SendMessage(msg types.Message) error {
-	content, err := json.Marshal([]types.Message{msg})
-	if err != nil {
-		log.Println(err)
-		return err
-	}
+	content := []byte(msg.Content)
 
-	if err = c.Conn.WriteMessage(websocket.TextMessage, content); err != nil {
+	if err := c.Conn.WriteMessage(websocket.TextMessage, content); err != nil {
 		log.Println(err)
 		return err
 	}
@@ -109,26 +69,16 @@ func (c *Connection) ReceiveMessages() error {
 			return err
 		}
 
-		if !c.authed {
-			owner, err := c.AuthConn(string(p))
-			if err != nil {
-				log.Println(err)
-				return err
-			}
-			c.Owner = owner
-			c.authed = true
-
-			if err = c.SendAllMessages(); err != nil {
-				return err
-			}
-			continue
-		}
-
 		if messageType != websocket.TextMessage {
 			return ErrSockReqInvalidFormat
 		}
 
-		msg, err := serv.store.CreateMessage(string(p), c.Owner.id, c.Owner.name)
+		msg := types.Message{
+			ID:         1,
+			Content:    string(p),
+			Timestamp:  string(rune(time.Now().Unix())),
+			Name_owner: c.Owner.name,
+		}
 
 		if err != nil {
 			log.Println(err)

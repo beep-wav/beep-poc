@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/Courtcircuits/mitter-server/types"
@@ -22,8 +23,8 @@ func NewHub() *Hub {
 func (h *Hub) AddConnection(conn *websocket.Conn) Connection {
 	h.lastId++
 	h.pool[h.lastId] = Connection{id: h.lastId, Conn: conn, Hub: h, Owner: Owner{
-		id:   0,
-		name: "",
+		id:   h.lastId,
+		name: fmt.Sprintf("user%d", h.lastId),
 	}, authed: false}
 	return h.pool[h.lastId]
 }
@@ -36,7 +37,9 @@ func (h *Hub) RemoveConnection(id int) {
 func (h *Hub) Broadcast(msg types.Message) error {
 	log.Printf("from hub : %q\n", msg)
 	for _, conn := range h.pool {
-		conn.SendMessage(msg)
+		if conn.Owner.name != msg.Name_owner {
+			conn.SendMessage(msg)
+		}
 	}
 	return nil
 }
